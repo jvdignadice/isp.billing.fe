@@ -1,10 +1,26 @@
 import { useState } from "react";
 import { env } from "@/config/env";
-import { LoginModal } from "@/features/auth/components/login-modal";
+import { AuthModalMode, LoginModal } from "@/features/auth/components/login-modal";
+import { LoginResult } from "@/features/auth/types/login.types";
 import { HealthCard } from "@/features/health/components/health-card";
 
 export function DashboardPage() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>("login");
+  const [session, setSession] = useState<LoginResult | null>(null);
+
+  const openAuthModal = (mode: AuthModalMode) => {
+    setAuthModalMode(mode);
+    setIsLoginOpen(true);
+  };
+
+  const handleLoginSuccess = (loginResult: LoginResult) => {
+    setSession(loginResult);
+  };
+
+  const handleSignOut = () => {
+    setSession(null);
+  };
 
   return (
     <>
@@ -17,9 +33,20 @@ export function DashboardPage() {
               <p className="brand__meta">Billing Intelligence Platform</p>
             </div>
           </div>
-          <button className="btn btn--ghost" type="button" onClick={() => setIsLoginOpen(true)}>
-            Sign In
-          </button>
+          {session ? (
+            <button className="btn btn--ghost" type="button" onClick={handleSignOut}>
+              Sign Out
+            </button>
+          ) : (
+            <div className="landing__header-actions">
+              <button className="btn btn--ghost" type="button" onClick={() => openAuthModal("register")}>
+                Create Account
+              </button>
+              <button className="btn btn--ghost" type="button" onClick={() => openAuthModal("login")}>
+                Sign In
+              </button>
+            </div>
+          )}
         </header>
 
         <section className="landing__hero">
@@ -34,12 +61,33 @@ export function DashboardPage() {
               <button
                 className="btn btn--primary"
                 type="button"
-                onClick={() => setIsLoginOpen(true)}
+                onClick={() => openAuthModal("login")}
+                disabled={Boolean(session)}
               >
-                Launch Login
+                {session ? "Session Active" : "Launch Login"}
               </button>
-              <p className="hero-copy__api">API target: {env.VITE_API_BASE_URL}</p>
+              <button
+                className="btn btn--ghost"
+                type="button"
+                onClick={() => openAuthModal("register")}
+                disabled={Boolean(session)}
+              >
+                Create Account
+              </button>
             </div>
+            {session ? (
+              <div className="session-summary">
+                <h3>Logged In Session</h3>
+                <p>
+                  <strong>{session.user.name}</strong> ({session.user.role})
+                </p>
+                <p>{session.user.email}</p>
+                <p>
+                  Token type: <code>{session.tokenType}</code> | Expires:{" "}
+                  <code>{session.expiresIn}</code>
+                </p>
+              </div>
+            ) : null}
           </article>
 
           <aside className="hero-side">
@@ -48,7 +96,12 @@ export function DashboardPage() {
         </section>
       </div>
 
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        initialMode={authModalMode}
+      />
     </>
   );
 }
